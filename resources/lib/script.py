@@ -4,6 +4,7 @@
 # License: GPL v.3 https://www.gnu.org/copyleft/gpl.html
 import os
 import sys
+import xbmc
 import xbmcaddon
 import xbmcvfs
 from PIL import Image
@@ -92,7 +93,7 @@ class Script(object):
         self.make_gradients(self.fg_color, self.bg_color, self.alpha)
 
         for k, v in self.params.items():
-            if k in ['fg', 'bg', 'alpha', 'folder']:
+            if k in ['fg', 'bg', 'alpha', 'folder', 'reload', 'no_reload']:
                 continue
 
             mask = xbmcvfs.translatePath(v)
@@ -100,3 +101,8 @@ class Script(object):
             mask_v_file = xbmcvfs.translatePath('{}/{}_v.png'.format(self.save_dir, k))
             make_masked(self.gradient_h, mask).save(mask_h_file)
             make_masked(self.gradient_v, mask).save(mask_v_file)
+
+        if 'no_reload' not in self.params:
+            xbmc.executebuiltin('ReloadSkin()')
+        if 'reload' in self.params:
+            xbmc.executebuiltin('ActivateWindow({})'.format(self.params['reload']))
