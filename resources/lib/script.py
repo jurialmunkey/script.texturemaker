@@ -7,7 +7,7 @@ import sys
 import xbmc
 import xbmcaddon
 import xbmcvfs
-from PIL import Image
+from PIL import Image, ImageChops
 
 ADDON = xbmcaddon.Addon('script.texturemaker')
 ADDONPATH = ADDON.getAddonInfo('path')
@@ -62,10 +62,20 @@ def make_gradient(fg_color='#ffff00', bg_color='red', alpha=0.8, gradient=GRADIE
     return bg_img
 
 
-def make_masked(base, mask):
+def make_masked(base, mask, multiply=False):
+    # Open mask image
     mk_img = Image.open(mask)
+
+    # Resize base gradient image to the size of the mask for quick processing
     og_img = base.resize(mk_img.size)
+
+    # Copy mask alpha channel to base to apply transparency mask
     og_img.putalpha(mk_img.getchannel('A'))
+
+    # Multiply base by mask to apply brightness mask (white=unaffected;grey=darken)
+    if multiply:
+        og_img = ImageChops.multiply(og_img, mk_img)
+
     return og_img
 
 
@@ -96,11 +106,16 @@ class Script(object):
             if k in ['fg', 'bg', 'alpha', 'folder', 'reload', 'no_reload']:
                 continue
 
+            # Get multiply keyword
+            multiply = True if '+multiply' in k else False
+            k = k.replace('+multiply', '')
+
+            # Create masked images
             mask = xbmcvfs.translatePath(v)
             mask_h_file = xbmcvfs.translatePath('{}/{}_h.png'.format(self.save_dir, k))
             mask_v_file = xbmcvfs.translatePath('{}/{}_v.png'.format(self.save_dir, k))
-            make_masked(self.gradient_h, mask).save(mask_h_file)
-            make_masked(self.gradient_v, mask).save(mask_v_file)
+            make_masked(self.gradient_h, mask, multiply=multiply).save(mask_h_file)
+            make_masked(self.gradient_v, mask, multiply=multiply).save(mask_v_file)
 
         if 'no_reload' not in self.params:
             xbmc.executebuiltin('ReloadSkin()')
