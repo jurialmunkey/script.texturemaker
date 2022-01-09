@@ -22,10 +22,13 @@ RunScript(script.texturemaker, fg=ffffffff, bg=ffffffff, alpha=1.0, folder=folde
 Output:
 special://profile/addon_data/script.texturemaker/{folder}/{file}
 
-gradient_h.png = Horizontal gradient from fg to bg with alpha applied to fg
-gradient_v.png = gradient_h rotated 90 degrees
-{mask_name}_h.png = gradient_h with {mask_file} applied as mask
-{mask_name}_v.png = gradient_v with {mask_file} applied as mask
+gradient_h.png      = Horizontal gradient from fg to bg with alpha applied to fg
+gradient_v.png      = gradient_h rotated 90 degrees
+{mask_name}_h.png   = gradient_h with {mask_file} applied as mask
+{mask_name}_v.png   = gradient_v with {mask_file} applied as mask
+
+mask_name+multiply  = apply {mask_file} using multiply
+mask_name+overlay   = layer "overlay_{mask_file}" on top of file
 
 """
 
@@ -62,7 +65,7 @@ def make_gradient(fg_color='#ffff00', bg_color='red', alpha=0.8, gradient=GRADIE
     return bg_img
 
 
-def make_masked(base, mask, multiply=False):
+def make_masked(base, mask, multiply=False, overlay=False):
     # Open mask image
     mk_img = Image.open(mask)
 
@@ -75,6 +78,11 @@ def make_masked(base, mask, multiply=False):
     # Multiply base by mask to apply brightness mask (white=unaffected;grey=darken)
     if multiply:
         og_img = ImageChops.multiply(og_img, mk_img)
+
+    # Overlay on top of image
+    if overlay:
+        fg_img = Image.open('{}_overlay{}'.format(mask[:-4], mask[-4:]))
+        og_img = Image.alpha_composite(og_img, fg_img)
 
     return og_img
 
@@ -110,12 +118,16 @@ class Script(object):
             multiply = True if '+multiply' in k else False
             k = k.replace('+multiply', '')
 
+            # Get overlay keyword
+            overlay = True if '+overlay' in k else False
+            k = k.replace('+overlay', '')
+
             # Create masked images
             mask = xbmcvfs.translatePath(v)
             mask_h_file = xbmcvfs.translatePath('{}/{}_h.png'.format(self.save_dir, k))
             mask_v_file = xbmcvfs.translatePath('{}/{}_v.png'.format(self.save_dir, k))
-            make_masked(self.gradient_h, mask, multiply=multiply).save(mask_h_file)
-            make_masked(self.gradient_v, mask, multiply=multiply).save(mask_v_file)
+            make_masked(self.gradient_h, mask, multiply=multiply, overlay=overlay).save(mask_h_file)
+            make_masked(self.gradient_v, mask, multiply=multiply, overlay=overlay).save(mask_v_file)
 
         if 'no_reload' not in self.params:
             xbmc.executebuiltin('ReloadSkin()')
