@@ -53,7 +53,7 @@ def make_gradient(fg_color='#ffff00', bg_color='red', alpha=0.8, gradient=GRADIE
     og_img = Image.open(gradient)
 
     # Apply alpha adjustment
-    og_img.putalpha(og_img.getchannel('A').point(lambda x: x * alpha))
+    og_img.putalpha(og_img.getchannel('A').point(lambda x: int(x * alpha)))
 
     # Apply colordiffuse
     fg_img = Image.new('RGBA', og_img.size, color=fg_color)
