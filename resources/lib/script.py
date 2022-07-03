@@ -3,6 +3,7 @@
 # Author: jurialmunkey
 # License: GPL v.3 https://www.gnu.org/copyleft/gpl.html
 import os
+import re
 import sys
 import xbmc
 import xbmcaddon
@@ -14,6 +15,7 @@ ADDONPATH = ADDON.getAddonInfo('path')
 ADDONDATA = 'special://profile/addon_data/script.texturemaker/'
 
 GRADIENT = xbmcvfs.translatePath('{}/resources/images/gradient.png'.format(ADDONPATH))
+SETTINGS = ['fg', 'bg', 'alpha', 'folder', 'reload', 'no_reload']
 
 
 """ Usage
@@ -29,6 +31,8 @@ gradient_v.png      = gradient_h rotated 90 degrees
 
 mask_name+multiply  = apply {mask_file} using multiply
 mask_name+overlay   = layer "overlay_{mask_file}" on top of file
+mask_name+padding{x|x|x|x} = apply transparent padding from edge (left, top, right, bottom)
+mask_name+slicing{edge|x} = slice image x pixels from edge
 
 """
 
@@ -65,7 +69,27 @@ def make_gradient(fg_color='#ffff00', bg_color='red', alpha=0.8, gradient=GRADIE
     return bg_img
 
 
-def make_masked(base, mask, multiply=False, overlay=False):
+def make_padded(base, left, top, right, bottom):
+    width, height = base.size
+    new_width = width + right + left
+    new_height = height + top + bottom
+    result = Image.new(base.mode, (new_width, new_height))
+    result.paste(base, (left, top))
+    return result
+
+
+def make_slices(base, edge, pixels):
+    width, height = base.size
+    if edge == 'left':
+        bb_x = (0, 0, pixels, height)
+        bb_y = (pixels, 0, width, height)
+    elif edge == 'right':
+        bb_x = (0, 0, width - pixels, height)
+        bb_y = (width - pixels, 0, width, height)
+    return (base.crop(bb_x), base.crop(bb_y))
+
+
+def make_masked(base, mask, multiply=False, overlay=False, padding=None):
     # Open mask image
     mk_img = Image.open(mask)
 
@@ -83,6 +107,10 @@ def make_masked(base, mask, multiply=False, overlay=False):
     if overlay:
         fg_img = Image.open('{}_overlay{}'.format(mask[:-4], mask[-4:]))
         og_img = Image.alpha_composite(og_img, fg_img)
+
+    # Padding added to canvas
+    if padding:
+        og_img = make_padded(og_img, *padding)
 
     return og_img
 
@@ -111,7 +139,7 @@ class Script(object):
         self.make_gradients(self.fg_color, self.bg_color, self.alpha)
 
         for k, v in self.params.items():
-            if k in ['fg', 'bg', 'alpha', 'folder', 'reload', 'no_reload']:
+            if k in SETTINGS:
                 continue
 
             # Get multiply keyword
@@ -122,12 +150,25 @@ class Script(object):
             overlay = True if '+overlay' in k else False
             k = k.replace('+overlay', '')
 
+            # Get padded keyword
+            r = re.search(r'\+padding\{(.*?)\}', k)
+            k, padding = (k.replace(r.group(0), ''), [int(i) for i in r.group(1).split('|')]) if r else (k, None)
+
+            # Get slicing keyword
+            r = re.search(r'\+slicing\{(.*?)\}', k)
+            k, slicing = (k.replace(r.group(0), ''), r.group(1).split('|')) if r else (k, None)
+
             # Create masked images
             mask = xbmcvfs.translatePath(v)
-            mask_h_file = xbmcvfs.translatePath('{}/{}_h.png'.format(self.save_dir, k))
-            mask_v_file = xbmcvfs.translatePath('{}/{}_v.png'.format(self.save_dir, k))
-            make_masked(self.gradient_h, mask, multiply=multiply, overlay=overlay).save(mask_h_file)
-            make_masked(self.gradient_v, mask, multiply=multiply, overlay=overlay).save(mask_v_file)
+            for i, j in [('h', self.gradient_h), ('v', self.gradient_v)]:
+                mask_file = xbmcvfs.translatePath(f'{self.save_dir}/{k}_{i}')
+                mask_img = make_masked(j, mask, multiply=multiply, overlay=overlay, padding=padding)
+                mask_img.save(f'{mask_file}.png')
+                if not slicing:
+                    continue
+                sliced_img_x, sliced_img_y = make_slices(mask_img, slicing[0], int(slicing[1]))
+                sliced_img_x.save(f'{mask_file}_x.png')
+                sliced_img_y.save(f'{mask_file}_y.png')
 
         if 'no_reload' not in self.params:
             xbmc.executebuiltin('ReloadSkin()')
