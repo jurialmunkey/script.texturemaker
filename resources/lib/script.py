@@ -32,7 +32,7 @@ gradient_v.png      = gradient_h rotated 90 degrees
 mask_name+multiply  = apply {mask_file} using multiply
 mask_name+overlay   = layer "overlay_{mask_file}" on top of file
 mask_name+padding{x|x|x|x} = apply transparent padding from edge (left, top, right, bottom)
-mask_name+slicing{edge|x} = slice image x pixels from edge
+mask_name+slicing{x|x} = slice image x pixels from edge (left, right)
 
 """
 
