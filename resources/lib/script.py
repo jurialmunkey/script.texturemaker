@@ -166,8 +166,13 @@ class Script(object):
                 mask_img.save(f'{mask_file}.png')
                 if not slicing:
                     continue
-                sliced_img_x, sliced_img_y = make_slices(mask_img, slicing[0], int(slicing[1]))
-                sliced_img_x.save(f'{mask_file}_x.png')
+                sliced_img_y = mask_img
+                if int(slicing[0]):
+                    sliced_img_x, sliced_img_y = make_slices(sliced_img_y, 'left', int(slicing[0]))
+                    sliced_img_x.save(f'{mask_file}_x.png')
+                if int(slicing[1]):
+                    sliced_img_y, sliced_img_z = make_slices(sliced_img_y, 'right', int(slicing[1]))
+                    sliced_img_z.save(f'{mask_file}_z.png')
                 sliced_img_y.save(f'{mask_file}_y.png')
 
         if 'no_reload' not in self.params:
