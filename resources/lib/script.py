@@ -179,3 +179,4 @@ class Script(object):
             xbmc.executebuiltin('ReloadSkin()')
         if 'reload' in self.params:
             xbmc.executebuiltin('ActivateWindow({})'.format(self.params['reload']))
+        xbmc.executebuiltin('Skin.SetBool(TextureMaker.Built)')
