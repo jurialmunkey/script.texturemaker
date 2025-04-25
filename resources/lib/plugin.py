@@ -5,7 +5,7 @@
 import sys
 import xbmcaddon
 from jurialmunkey.parser import parse_paramstring
-from jurialmunkey.litems import Container
+from jurialmunkey.litems import ContainerDirectory
 
 ADDON = xbmcaddon.Addon('script.texturemaker')
 ADDONPATH = ADDON.getAddonInfo('path')
@@ -13,7 +13,7 @@ ADDONDATA = 'special://profile/addon_data/script.texturemaker/'
 COLORDEFS = '{}/resources/colors/colors.json'.format(ADDONPATH)
 
 
-class ListGetColorSwatches(Container):
+class ListGetColorSwatches(ContainerDirectory):
     def get_directory(self, **kwargs):
         import os
         import json
@@ -48,7 +48,7 @@ class ListGetColorSwatches(Container):
         self.add_items(items)
 
 
-class ListGetPixelValue(Container):
+class ListGetPixelValue(ContainerDirectory):
     def get_directory(self, x, y, res_w=1920, res_h=1080, window_prop=None, window_id=None, **kwargs):
         import xbmcgui
         from jurialmunkey.window import set_to_windowprop
